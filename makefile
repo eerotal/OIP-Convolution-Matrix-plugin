@@ -5,11 +5,11 @@ NAME=convolution
 
 SRCDIR=src
 BUILDDIR=bin
-OIPDIR=/home/pi/GIT/OIP/src
+OIPDIR=/home/eero/projects/OIP/src
 
 INCLUDES=-I$(OIPDIR)/imgutil/ -I$(OIPDIR)/headers
 LIBS=-L$(OIPDIR)/imgutil/bin/
 
 compile: $(SRCDIR)/*.c
 	mkdir -p $(BUILDDIR)
-	$(CC) $(CFLAGS) $(SRCDIR)/*.c -o $(BUILDDIR)/lib$(NAME).so $(INCLUDES) $(LIBS) -L$(LIBDIR) $(LFLAGS)
+	$(CC) $(CFLAGS) $(SRCDIR)/*.c -o $(BUILDDIR)/lib$(NAME).so $(INCLUDES) $(LIBS) $(LFLAGS)

@@ -19,6 +19,7 @@ static inline void trunc_to_uint8_t(int32_t var, uint8_t *dest);
 static RGBQUAD *get_pixel_rel(const IMAGE *img, int32_t x, int32_t y, int32_t r_x, int32_t r_y);
 static void image_convolve_at(const IMAGE *img, int32_t x, int32_t y, KERNEL *kern, RGBQUAD *p_dest);
 static void image_convolve(const IMAGE *img, IMAGE *img_dest, KERNEL *kern);
+static int convolution_parse_args(const char **plugin_args, unsigned int plugin_args_count);
 int convolution_process(const IMAGE *img, IMAGE *img_dest,
 			const char **plugin_args,
 			unsigned int plugin_args_count);
@@ -46,12 +47,12 @@ PLUGIN_PARAMS PLUGIN_PARAMS_NAME(convolution) = {
 };
 
 // Define convolution kernel.
-static int16_t plugin_kernel_array[] = {1, 1, 1, 1, 1, 1, 1, 1, 1};
+static int16_t plugin_kernel_array[9] = { 0 };
 static KERNEL plugin_kernel = {
 	.kernel = plugin_kernel_array,
 	.w = 3,
 	.h = 3,
-	.divisor = 9.0f
+	.divisor = 1.0f
 };
 
 static inline void trunc_to_uint8_t(int32_t var, uint8_t *dest) {
@@ -155,9 +156,57 @@ static void image_convolve(const IMAGE *img, IMAGE *img_dest, KERNEL *kern) {
 	}
 }
 
+static int convolution_parse_args(const char **plugin_args, unsigned int plugin_args_count) {
+	uint8_t kernel_parsed = 0;
+	uint8_t divisor_parsed = 0;
+	uint8_t c_s = 0, k = 0;
+
+	printf("convolution: Parsing plugin args.\n");
+	for (unsigned int i = 0; i < plugin_args_count; i++) {
+		printf("convolution: ARG %i => %s: %s\n", i, plugin_args[i*2], plugin_args[i*2 + 1]);
+		if (strcmp(plugin_args[i*2], "kernel") == 0) {
+			for (unsigned int c_e = 0; c_e < strlen(plugin_args[i*2 + 1]); c_e++) {
+				if (plugin_args[i*2 + 1][c_e] == ',') {
+					// Add the kernel multipliers one by one.
+					plugin_kernel.kernel[k] = strtol(plugin_args[i*2 + 1] + c_s, NULL, 10);
+					c_s = c_e + 1;
+
+					k++;
+					if (k >= 9) {
+						break;
+					}
+				}
+			}
+			// Add the last kernel multiplier.
+			if (k < 9) {
+				plugin_kernel.kernel[k] = strtol(plugin_args[i*2 + 1] + c_s, NULL, 10);
+			}
+
+			// Only set the kernel parsed flag if all the multipliers are found.
+			if (k == 8) {
+				kernel_parsed = 1;
+			}
+		} else if (strcmp(plugin_args[i*2], "divisor") == 0) {
+			plugin_kernel.divisor = strtof(plugin_args[i*2 + 1], NULL);
+			divisor_parsed = 1;
+		}
+	}
+
+	if (kernel_parsed == 1 && divisor_parsed == 1) {
+		printf("convolution: Plugin args parsed.\n");
+		return 0;
+	}
+
+	printf("convolution: Failed to parse plugin args.\n");
+	return 1;
+}
+
 int convolution_process(const IMAGE *img, IMAGE *img_dest,
 			const char **plugin_args,
 			unsigned int plugin_args_count) {
+	if (convolution_parse_args(plugin_args, plugin_args_count) != 0) {
+		return 1;
+	}
 	printf("convolution: Received %i bytes of image data.\n", img_bytelen(img));
 	if (img_realloc(img_dest, img->w, img->h) != 0) {
 		return 1;
@@ -172,14 +221,5 @@ int convolution_setup(void) {
 }
 
 void convolution_cleanup(void) {
-	/*if (plugin_kernel) {
-		if (plugin_kernel->kernel) {
-			free(plugin_kernel->kernel);
-			plugin_kernel->kernel = NULL;
-			printf("convolution: Free'd kernel array.\n");
-		}
-		free(plugin_kernel);
-		plugin_kernel = NULL;
-		printf("convolution: Free'd kernel.\n");
-	}*/
+
 }
