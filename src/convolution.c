@@ -34,7 +34,7 @@ static char *plugin_valid_args[10] = {
 };
 
 // Define plugin parameters.
-PLUGIN_PARAMS PLUGIN_PARAMS_NAME(convolution) = {
+PLUGIN_INFO PLUGIN_INFO_NAME(convolution) = {
 	.name = "convolution",
 	.descr = "A convolution matrix plugin.",
 	.author = "Eero Talus",
