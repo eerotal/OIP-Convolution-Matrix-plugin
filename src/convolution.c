@@ -7,19 +7,24 @@
 #include "plugin.h"
 
 #define RGBA_CHANNELS 4
+#define KERNEL_W 3
+#define KERNEL_H 3
 
 typedef struct STRUCT_KERNEL {
-	int16_t *kernel;
-	uint16_t w;
-	uint16_t h;
+	int *kernel;
+	unsigned int w;
+	unsigned int h;
 	float divisor;
 } KERNEL;
 
 static inline void trunc_to_uint8_t(int32_t var, uint8_t *dest);
-static RGBQUAD *get_pixel_rel(const IMAGE *img, int32_t x, int32_t y, int32_t r_x, int32_t r_y);
-static void image_convolve_at(const IMAGE *img, int32_t x, int32_t y, KERNEL *kern, RGBQUAD *p_dest);
+static RGBQUAD *get_pixel_rel(const IMAGE *img, int32_t x, int32_t y,
+				int32_t r_x, int32_t r_y);
+static void image_convolve_at(const IMAGE *img, int32_t x, int32_t y,
+				KERNEL *kern, RGBQUAD *p_dest);
 static void image_convolve(const IMAGE *img, IMAGE *img_dest, KERNEL *kern);
-static int convolution_parse_args(const char **plugin_args, unsigned int plugin_args_count);
+static int convolution_parse_args(const char **plugin_args,
+				unsigned int plugin_args_count);
 int convolution_process(const IMAGE *img, IMAGE *img_dest,
 			const char **plugin_args,
 			unsigned int plugin_args_count);
@@ -39,19 +44,24 @@ PLUGIN_INFO PLUGIN_INFO_NAME(convolution) = {
 	.descr = "A convolution matrix plugin.",
 	.author = "Eero Talus",
 	.year = "2017",
-	.valid_args = plugin_valid_args,
-	.valid_args_count = 3,
+	.valid_args = plugin_valid_args,	.valid_args_count = 3,
 	.plugin_process = convolution_process,
 	.plugin_setup = convolution_setup,
 	.plugin_cleanup = convolution_cleanup
 };
 
-// Define convolution kernel.
-static int16_t plugin_kernel_array[9] = { 0 };
+static struct ENABLED_CHANNELS {
+	uint8_t r;
+	uint8_t g;
+	uint8_t b;
+	uint8_t a;
+} enabled_channels = {0, 0, 0, 0};
+
+static int kernel_matrix[KERNEL_W*KERNEL_H] = { 0 };
 static KERNEL plugin_kernel = {
-	.kernel = plugin_kernel_array,
-	.w = 3,
-	.h = 3,
+	.kernel = kernel_matrix,
+	.w = KERNEL_W,
+	.h = KERNEL_H,
 	.divisor = 1.0f
 };
 
@@ -112,12 +122,19 @@ static RGBQUAD *get_pixel_rel(const IMAGE *img, int32_t x, int32_t y, int32_t r_
 }
 
 static void image_convolve_at(const IMAGE *img, int32_t x, int32_t y, KERNEL *kern, RGBQUAD *p_dest) {
-	int16_t multiplier = 0;
-	int32_t p_dest_tmp[RGBA_CHANNELS] = { 0 };
+	int multiplier = 0;
+	int p_dest_tmp[RGBA_CHANNELS] = { 0 };
 	RGBQUAD *p = NULL;
 
-	for (int16_t k_y = 0; k_y < kern->h; k_y++) {
-		for (int16_t k_x = 0; k_x < kern->w; k_x++) {
+	// Initially copy the source pixel to the destination pixel.
+	p = get_pixel_rel(img, x, y, 0, 0);
+	if (p == NULL) {
+		return;
+	}
+	memcpy(p_dest, p, sizeof(RGBQUAD));
+
+	for (int k_y = 0; k_y < kern->h; k_y++) {
+		for (int k_x = 0; k_x < kern->w; k_x++) {
 			multiplier = kern->kernel[k_y*kern->w + k_x];
 			if (multiplier == 0) {
 				continue;
@@ -140,11 +157,19 @@ static void image_convolve_at(const IMAGE *img, int32_t x, int32_t y, KERNEL *ke
 		p_dest_tmp[3] = round(p_dest_tmp[3]/kern->divisor);
 	}
 
-	trunc_to_uint8_t(p_dest_tmp[0], &p_dest->rgbRed);
-	trunc_to_uint8_t(p_dest_tmp[1], &p_dest->rgbGreen);
-	trunc_to_uint8_t(p_dest_tmp[2], &p_dest->rgbBlue);
-	trunc_to_uint8_t(p_dest_tmp[3], &p_dest->rgbReserved);
-	//printf("(%i, %i, %i, %i)\n", p_dest->rgbRed, p_dest->rgbGreen, p_dest->rgbBlue, p_dest->rgbReserved);
+	// Copy the channels that are enabled into the destination pixel.
+	if (enabled_channels.r) {
+		trunc_to_uint8_t(p_dest_tmp[0], &p_dest->rgbRed);
+	}
+	if (enabled_channels.g) {
+		trunc_to_uint8_t(p_dest_tmp[1], &p_dest->rgbGreen);
+	}
+	if (enabled_channels.b) {
+		trunc_to_uint8_t(p_dest_tmp[2], &p_dest->rgbBlue);
+	}
+	if (enabled_channels.a) {
+		trunc_to_uint8_t(p_dest_tmp[3], &p_dest->rgbReserved);
+	}
 }
 
 static void image_convolve(const IMAGE *img, IMAGE *img_dest, KERNEL *kern) {
@@ -157,47 +182,82 @@ static void image_convolve(const IMAGE *img, IMAGE *img_dest, KERNEL *kern) {
 }
 
 static int convolution_parse_args(const char **plugin_args, unsigned int plugin_args_count) {
-	uint8_t kernel_parsed = 0;
-	uint8_t divisor_parsed = 0;
-	uint8_t c_s = 0, k = 0;
+	unsigned int kernel_parsed = 0;
+	unsigned int divisor_parsed = 0;
+	unsigned int channels_parsed = 0;
+	unsigned int no_channels_enabled = 1;
+	unsigned int s = 0, k = 0;
+	char *tmp_arg = NULL;
+	char *tmp_val = NULL;
 
-	printf("convolution: Parsing plugin args.\n");
 	for (unsigned int i = 0; i < plugin_args_count; i++) {
-		printf("convolution: ARG %i => %s: %s\n", i, plugin_args[i*2], plugin_args[i*2 + 1]);
-		if (strcmp(plugin_args[i*2], "kernel") == 0) {
-			for (unsigned int c_e = 0; c_e < strlen(plugin_args[i*2 + 1]); c_e++) {
-				if (plugin_args[i*2 + 1][c_e] == ',') {
-					// Add the kernel multipliers one by one.
-					plugin_kernel.kernel[k] = strtol(plugin_args[i*2 + 1] + c_s, NULL, 10);
-					c_s = c_e + 1;
-
+		tmp_arg = (char*) plugin_args[i*2];
+		tmp_val = (char*) plugin_args[i*2 + 1];
+		if (strcmp(tmp_arg, "kernel") == 0) {
+			for (unsigned int c = 0; c < strlen(tmp_val) && k < 9; c++) {
+				if (tmp_val[c] == ',') {
+					// Convert kernel multipliers.
+					plugin_kernel.kernel[k] = strtol(tmp_val + s, NULL, 10);
+					s = c + 1;
 					k++;
-					if (k >= 9) {
-						break;
-					}
 				}
 			}
 			// Add the last kernel multiplier.
 			if (k < 9) {
-				plugin_kernel.kernel[k] = strtol(plugin_args[i*2 + 1] + c_s, NULL, 10);
+				plugin_kernel.kernel[k] = strtol(tmp_val + s, NULL, 10);
 			}
 
 			// Only set the kernel parsed flag if all the multipliers are found.
 			if (k == 8) {
 				kernel_parsed = 1;
 			}
-		} else if (strcmp(plugin_args[i*2], "divisor") == 0) {
-			plugin_kernel.divisor = strtof(plugin_args[i*2 + 1], NULL);
+		} else if (strcmp(tmp_arg, "divisor") == 0) {
+			plugin_kernel.divisor = strtof(tmp_val, NULL);
+			printf("convolution: Kernel divisor: %f.\n", plugin_kernel.divisor);
 			divisor_parsed = 1;
+		} else if (strcmp(tmp_arg, "channels") == 0) {
+			memset(&enabled_channels, 0, sizeof(struct ENABLED_CHANNELS));
+			printf("convolution: Enabled channels: ");
+			for (int c = 0; c < strlen(tmp_val); c++) {
+				switch (tmp_val[c]) {
+					case 'R':
+						enabled_channels.r = 1;
+						printf("R");
+						no_channels_enabled = 0;
+						break;
+					case 'G':
+						enabled_channels.g = 1;
+						printf("G");
+						no_channels_enabled = 0;
+						break;
+					case 'B':
+						enabled_channels.b = 1;
+						printf("B");
+						no_channels_enabled = 0;
+						break;
+					case 'A':
+						enabled_channels.a = 1;
+						printf("A");
+						no_channels_enabled = 0;
+						break;
+					default:
+						break;
+				}
+			}
+			if (no_channels_enabled) {
+				printf("None\n");
+			} else {
+				printf("\n");
+			}
+			channels_parsed = 1;
 		}
 	}
 
-	if (kernel_parsed == 1 && divisor_parsed == 1) {
-		printf("convolution: Plugin args parsed.\n");
+	if (kernel_parsed && divisor_parsed && channels_parsed) {
 		return 0;
 	}
 
-	printf("convolution: Failed to parse plugin args.\n");
+	printf("convolution: Plugin args missing.\n");
 	return 1;
 }
 
@@ -220,6 +280,4 @@ int convolution_setup(void) {
 	return 0;
 }
 
-void convolution_cleanup(void) {
-
-}
+void convolution_cleanup(void) {}
