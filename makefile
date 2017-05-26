@@ -18,3 +18,5 @@ compile: $(SRCDIR)/*.c
 install:
 	cp $(BUILDDIR)/lib$(NAME).so $(OIP_PLUGIN_DIR)
 	
+LOC:
+	wc -l $(SRCDIR)/*.c
