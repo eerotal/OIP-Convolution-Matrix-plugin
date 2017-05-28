@@ -10,31 +10,34 @@ suitable convolution matrices and their divisors is to search the internet.
 
 ## Plugin arguments
 
-`kernel`  
-* This argument specifies the convolution matrix. The value should be
-  a list of nine integers separated by commas. Each consequent set of
-  three integers is one line from top to bottom ie. 1,2,3,4,5,6,7,8,9
-  corresponds to the matrix
+### kernel
 
-	`| 1 2 3 |
-	 | 4 5 6 |
-	 | 7 8 9 |`
+This argument specifies the convolution matrix. The value should be
+a list of nine integers separated by commas. Each consequent set of
+three integers is one line from top to bottom ie. `1,2,3,4,5,6,7,8,9`
+corresponds to the matrix  
 
-`divisor`  
-* This argument specifies the divisor used with the kernel. The value
-  should be a floating point number.
+`| 1 2 3 |`  
+`| 4 5 6 |`  
+`| 7 8 9 |`  
 
-`channels`  
-* This argument specifies the channels that will be affected by the
-  convolution matrix. The value of this argument should be a
-  combination of the letters R, G, B and A where  
+#### divisor
 
-	`R = Red channel  
-	 G = Green channel  
-	 B = Blue channel  
-	 A = Alpha channel`  
+This argument specifies the divisor used with the kernel. The value
+should be a floating point number.
 
-  For example, the value RB would enable the red and blue channels.  
+#### channels
+
+This argument specifies the channels that will be affected by the
+convolution matrix. The value of this argument should be a
+combination of the letters R, G, B and A where  
+
+`R = Red channel`  
+`G = Green channel`  
+`B = Blue channel`  
+`A = Alpha channel`  
+
+For example, the value RB would enable the red and blue channels.  
 
 ## Compiling
 
