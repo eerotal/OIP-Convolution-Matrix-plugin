@@ -18,12 +18,16 @@
 *  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#define PRINT_IDENTIFIER "convolution"
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
 #include <math.h>
 #include <FreeImage.h>
+
+#include "output.h"
 #include "plugin.h"
 
 #define RGBA_CHANNELS 4
@@ -64,7 +68,12 @@ PLUGIN_INFO PLUGIN_INFO_NAME(convolution) = {
 	.descr = "A convolution matrix plugin.",
 	.author = "Eero Talus",
 	.year = "2017",
-	.valid_args = plugin_valid_args,	.valid_args_count = 3,
+
+	.valid_args = plugin_valid_args,
+	.valid_args_count = 3,
+
+	.flag_print_verbose = &print_verbose,
+
 	.plugin_process = convolution_process,
 	.plugin_setup = convolution_setup,
 	.plugin_cleanup = convolution_cleanup
@@ -233,41 +242,51 @@ static int convolution_parse_args(const char **plugin_args, unsigned int plugin_
 			}
 		} else if (strcmp(tmp_arg, "divisor") == 0) {
 			plugin_kernel.divisor = strtof(tmp_val, NULL);
-			printf("convolution: Kernel divisor: %f.\n", plugin_kernel.divisor);
+			printverb_va("Kernel divisor: %f.\n", plugin_kernel.divisor);
 			divisor_parsed = 1;
 		} else if (strcmp(tmp_arg, "channels") == 0) {
 			memset(&enabled_channels, 0, sizeof(struct ENABLED_CHANNELS));
-			printf("convolution: Enabled channels: ");
+			printverb("Enabled channels: ");
 			for (int c = 0; c < strlen(tmp_val); c++) {
 				switch (tmp_val[c]) {
 					case 'R':
 						enabled_channels.r = 1;
-						printf("R");
+						if (print_verbose) {
+							printf("R");
+						}
 						no_channels_enabled = 0;
 						break;
 					case 'G':
 						enabled_channels.g = 1;
-						printf("G");
+						if (print_verbose) {
+							printf("G");
+						}
 						no_channels_enabled = 0;
 						break;
 					case 'B':
 						enabled_channels.b = 1;
-						printf("B");
+						if (print_verbose) {
+							printf("B");
+						}
 						no_channels_enabled = 0;
 						break;
 					case 'A':
 						enabled_channels.a = 1;
-						printf("A");
+						if (print_verbose) {
+							printf("A");
+						}
 						no_channels_enabled = 0;
 						break;
 					default:
 						break;
 				}
 			}
-			if (no_channels_enabled) {
-				printf("None\n");
-			} else {
-				printf("\n");
+			if (print_verbose) {
+				if (no_channels_enabled) {
+					printf("None\n");
+				} else {
+					printf("\n");
+				}
 			}
 			channels_parsed = 1;
 		}
@@ -277,7 +296,7 @@ static int convolution_parse_args(const char **plugin_args, unsigned int plugin_
 		return 0;
 	}
 
-	printf("convolution: Plugin args missing.\n");
+	printerr("Plugin args missing.\n");
 	return 1;
 }
 
@@ -287,12 +306,12 @@ int convolution_process(const IMAGE *img, IMAGE *img_dest,
 	if (convolution_parse_args(plugin_args, plugin_args_count) != 0) {
 		return 1;
 	}
-	printf("convolution: Received %i bytes of image data.\n", img_bytelen(img));
+	printverb_va("Received %i bytes of image data.\n", img_bytelen(img));
 	if (img_realloc(img_dest, img->w, img->h) != 0) {
 		return 1;
 	}
 	image_convolve(img, img_dest, &plugin_kernel);
-	printf("convolution: Processed %i bytes of data.\n", img_bytelen(img));
+	printverb_va("Processed %i bytes of data.\n", img_bytelen(img));
 	return 0;
 }
 
