@@ -47,22 +47,20 @@ static RGBQUAD *get_pixel_rel(const IMAGE *img, int32_t x, int32_t y,
 static void image_convolve_at(const IMAGE *img, int32_t x, int32_t y,
 				KERNEL *kern, RGBQUAD *p_dest);
 static void image_convolve(const IMAGE *img, IMAGE *img_dest, KERNEL *kern);
-static int convolution_parse_args(const char **plugin_args,
-				unsigned int plugin_args_count);
-int convolution_process(const IMAGE *img, IMAGE *img_dest,
-			const char **plugin_args,
-			unsigned int plugin_args_count);
-int convolution_setup(void);
-void convolution_cleanup(void);
+static int convolution_parse_args(char **plugin_args, unsigned int plugin_args_count);
 
-// Define valid plugin arguments.
-static char *plugin_valid_args[10] = {
+static int convolution_process(struct PLUGIN_INDATA *in);
+static int convolution_setup(void);
+static void convolution_cleanup(void);
+
+// Valid plugin arguments
+static const char *plugin_valid_args[10] = {
 	"kernel",
 	"divisor",
 	"channels"
 };
 
-// Define plugin parameters.
+// Plugin information
 PLUGIN_INFO PLUGIN_INFO_NAME(convolution) = {
 	.name = "convolution",
 	.descr = "A convolution matrix plugin.",
@@ -210,7 +208,7 @@ static void image_convolve(const IMAGE *img, IMAGE *img_dest, KERNEL *kern) {
 	}
 }
 
-static int convolution_parse_args(const char **plugin_args, unsigned int plugin_args_count) {
+static int convolution_parse_args(char **plugin_args, unsigned int plugin_args_count) {
 	unsigned int kernel_parsed = 0;
 	unsigned int divisor_parsed = 0;
 	unsigned int channels_parsed = 0;
@@ -300,23 +298,25 @@ static int convolution_parse_args(const char **plugin_args, unsigned int plugin_
 	return 1;
 }
 
-int convolution_process(const IMAGE *img, IMAGE *img_dest,
-			const char **plugin_args,
-			unsigned int plugin_args_count) {
-	if (convolution_parse_args(plugin_args, plugin_args_count) != 0) {
-		return 1;
+static int convolution_process(struct PLUGIN_INDATA *in) {
+	if (convolution_parse_args(in->args, in->argc) != 0) {
+		return PLUGIN_STATUS_ERROR;
 	}
-	printverb_va("Received %i bytes of image data.\n", img_bytelen(img));
-	if (img_realloc(img_dest, img->w, img->h) != 0) {
-		return 1;
+
+	printverb_va("Received %i bytes of image data.\n", img_bytelen(in->src));
+
+	if (img_realloc(in->dst, in->src->w, in->src->h) != 0) {
+		return PLUGIN_STATUS_ERROR;
 	}
-	image_convolve(img, img_dest, &plugin_kernel);
-	printverb_va("Processed %i bytes of data.\n", img_bytelen(img));
+
+	image_convolve(in->src, in->dst, &plugin_kernel);
+	printverb_va("Processed %i bytes of data.\n", img_bytelen(in->src));
+
+	return PLUGIN_STATUS_DONE;
+}
+
+static int convolution_setup(void) {
 	return 0;
 }
 
-int convolution_setup(void) {
-	return 0;
-}
-
-void convolution_cleanup(void) {}
+static void convolution_cleanup(void) {}
