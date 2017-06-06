@@ -19,9 +19,11 @@
 
 # Set some compilation options.
 CC=gcc
-CCFLAGS=-Wall -Wpedantic -std=gnu99 -fPIC -shared
+CCFLAGS=-Wall -Wpedantic -std=gnu11 -fPIC -shared
 LFLAGS=-lm -lfreeimage -loipimgutil
 NAME=convolution
+
+MEMDEBUG=false
 
 # Enable memory debugging options.
 ifeq ($(MEMDEBUG), true)
