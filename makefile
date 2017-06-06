@@ -19,9 +19,15 @@
 
 # Set some compilation options.
 CC=gcc
-CFLAGS=-Wall -Wpedantic -std=gnu99 -fpic -shared
+CCFLAGS=-Wall -Wpedantic -std=gnu99 -fPIC -shared
 LFLAGS=-lm -lfreeimage -loipimgutil
 NAME=convolution
+
+# Enable memory debugging options.
+ifeq ($(MEMDEBUG), true)
+$(info Enabling memory debugging options.)
+CCFLAGS+=-fsanitize=address
+endif
 
 # Check whether the build-config file exists.
 ifeq ($(wildcard build-config),)
@@ -31,6 +37,7 @@ endif
 # Include the build-config file.
 include build-config
 
+# Setup some path variables.
 SRCDIR=src
 BINDIR=bin
 OIP_PLUGIN_DIR=$(OIPDIR)/plugins
@@ -40,7 +47,7 @@ LIBS=-L$(OIPDIR)/src/imgutil/bin/
 
 compile: $(SRCDIR)/*.c
 	mkdir -p $(BINDIR)
-	$(CC) $(CFLAGS) $(SRCDIR)/*.c -o $(BINDIR)/lib$(NAME).so $(INCLUDES) $(LIBS) $(LFLAGS)
+	$(CC) $(CCFLAGS) $(SRCDIR)/*.c -o $(BINDIR)/lib$(NAME).so $(INCLUDES) $(LIBS) $(LFLAGS)
 
 install:
 	cp $(BINDIR)/lib$(NAME).so $(OIP_PLUGIN_DIR)
