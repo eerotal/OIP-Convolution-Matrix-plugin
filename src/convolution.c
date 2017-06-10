@@ -47,7 +47,6 @@ static RGBQUAD *get_pixel_rel(const IMAGE *img, int32_t x, int32_t y,
 				int32_t r_x, int32_t r_y);
 static void image_convolve_at(const IMAGE *img, int32_t x, int32_t y,
 				KERNEL *kern, RGBQUAD *p_dest);
-static void image_convolve(const IMAGE *img, IMAGE *img_dest, KERNEL *kern);
 static int convolution_parse_args(char **plugin_args, unsigned int plugin_args_count);
 
 static int convolution_process(struct PLUGIN_INDATA *in);
@@ -201,15 +200,6 @@ static void image_convolve_at(const IMAGE *img, int32_t x, int32_t y, KERNEL *ke
 	}
 }
 
-static void image_convolve(const IMAGE *img, IMAGE *img_dest, KERNEL *kern) {
-	for (uint32_t y = 0; y < img->h; y++) {
-		for (uint32_t x = 0; x < img->w; x++) {
-			image_convolve_at(img, x, y, kern,
-				img_dest->img + y*img_dest->w + x);
-		}
-	}
-}
-
 static int convolution_parse_args(char **plugin_args, unsigned int plugin_args_count) {
 	unsigned int kernel_parsed = 0;
 	unsigned int divisor_parsed = 0;
@@ -311,9 +301,15 @@ static int convolution_process(struct PLUGIN_INDATA *in) {
 		return PLUGIN_STATUS_ERROR;
 	}
 
-	image_convolve(in->src, in->dst, &plugin_kernel);
-	printverb_va("Processed %zu bytes of data.\n", img_bytelen(in->src));
+	for (uint32_t y = 0; y < in->src->h; y++) {
+		for (uint32_t x = 0; x < in->src->w; x++) {
+			image_convolve_at(in->src, x, y, &plugin_kernel,
+				in->dst->img + y*in->dst->w + x);
+		}
+		in->set_progress((int) round((float)y/in->src->h*100));
+	}
 
+	printverb_va("Processed %zu bytes of data.\n", img_bytelen(in->src));
 	return PLUGIN_STATUS_DONE;
 }
 
