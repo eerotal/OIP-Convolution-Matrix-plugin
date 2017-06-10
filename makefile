@@ -73,7 +73,7 @@ include $(OIPDIR)/build-config
 compile: $(SRCDIR)/*.c
 	@mkdir -p $(BINDIR)
 	@echo -n "[INFO]: Compiling "$(NAME)"..."
-	@$(CC) $(CCFLAGS) $(OIP_VERFLAGS) $(SRCDIR)/*.c -o $(BINDIR)/lib$(NAME).so $(INCLUDES) $(LIBS) $(LFLAGS)
+	@$(CC) $(CCFLAGS) $(SRCDIR)/*.c -o $(BINDIR)/lib$(NAME).so $(INCLUDES) $(LIBS) $(LFLAGS)
 	@echo " Done."
 
 # Copy the plugin to the OIP plugins directory.
