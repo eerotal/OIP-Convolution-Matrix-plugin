@@ -29,6 +29,7 @@
 
 #include "output.h"
 #include "plugin.h"
+#include "buildinfo/build.h"
 
 #define RGBA_CHANNELS 4
 #define KERNEL_W 3
@@ -66,6 +67,7 @@ PLUGIN_INFO PLUGIN_INFO_NAME(convolution) = {
 	.descr = "A convolution matrix plugin.",
 	.author = "Eero Talus",
 	.year = "2017",
+	.built_against = &OIP_BUILT_AGAINST,
 
 	.valid_args = plugin_valid_args,
 	.valid_args_count = 3,

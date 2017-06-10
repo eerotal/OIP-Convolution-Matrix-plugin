@@ -20,45 +20,77 @@
 # Set some compilation options.
 CC=gcc
 CCFLAGS=-Wall -Wpedantic -std=gnu11 -fPIC -shared
-LFLAGS=-lm -lfreeimage -loipimgutil
-NAME=convolution
+LFLAGS=-lm -lfreeimage -loipimgutil -loipbuildinfo
 
-MEMDEBUG=false
+# Enable debugging options.
+DEBUG=0
+ifeq ($(DEBUG), 1)
+$(info [INFO]: Enabling debugging options.)
+CCFLAGS+=-fsanitize=address -g
+endif
 
-# Enable memory debugging options.
-ifeq ($(MEMDEBUG), true)
-$(info Enabling memory debugging options.)
-CCFLAGS+=-fsanitize=address
+# Set some project configuration defaults. These can be
+# overridden with the project-config file.
+NAME=plugin
+SRCDIR=src
+BINDIR=bin
+
+# Check whether the project-config file exists and include it if it does.
+ifneq ($(wildcard project-config),)
+$(info [INFO]: Loading project configuration from the file project-config)
+include project-config
 endif
 
 # Check whether the build-config file exists.
 ifeq ($(wildcard build-config),)
-$(error No build-config file found! Please run config-build-env.sh first)
+$(error [ERROR]: No build-config file found! Please run config-build-env.sh first)
+configure
 endif
 
 # Include the build-config file.
+$(info [INFO]: Loading build configuration from the file build-config)
 include build-config
 
 # Setup some path variables.
-SRCDIR=src
-BINDIR=bin
 OIP_PLUGIN_DIR=$(OIPDIR)/plugins
 
-INCLUDES=-I$(OIPDIR)/src/imgutil/ -I$(OIPDIR)/src/headers
-LIBS=-L$(OIPDIR)/src/imgutil/bin/
+INCLUDES+=-I$(OIPDIR)/src/imgutil
+INCLUDES+=-I$(OIPDIR)/src/buildinfo
+INCLUDES+=-I$(OIPDIR)/src/headers
 
+LIBS+=-L$(OIPDIR)/src/imgutil/bin/
+LIBS+=-L$(OIPDIR)/src/buildinfo/bin/
+
+# Check if the OIP directory path is specified and throw an error if not.
+ifndef OIPDIR
+$(error [ERROR]: Open Image Pipeline directory not defined. There's something wrong with the build-config file)
+endif
+
+# Include the OIP build-config file.
+include $(OIPDIR)/build-config
+
+# Compile the plugin.
 compile: $(SRCDIR)/*.c
-	mkdir -p $(BINDIR)
-	$(CC) $(CCFLAGS) $(SRCDIR)/*.c -o $(BINDIR)/lib$(NAME).so $(INCLUDES) $(LIBS) $(LFLAGS)
+	@mkdir -p $(BINDIR)
+	@echo -n "[INFO]: Compiling "$(NAME)"..."
+	@$(CC) $(CCFLAGS) $(OIP_VERFLAGS) $(SRCDIR)/*.c -o $(BINDIR)/lib$(NAME).so $(INCLUDES) $(LIBS) $(LFLAGS)
+	@echo " Done."
 
+# Copy the plugin to the OIP plugins directory.
 install:
-	cp $(BINDIR)/lib$(NAME).so $(OIP_PLUGIN_DIR)
+	@echo -n "[INFO]: Copying 'lib"$(NAME)".so' to '"$(OIP_PLUGIN_DIR)"'..."
+	@cp $(BINDIR)/lib$(NAME).so $(OIP_PLUGIN_DIR)
+	@echo " Done."
 
+# Delete the compiled .so files.
 clean:
 	rm -rf $(BINDIR)
 
+# Delete the compiled .so files and the build-config file.
 clean-hard: clean
 	rm -f build-config
 	
+# Count the lines of code in this project.
 LOC:
 	wc -l $(SRCDIR)/*.c
+
