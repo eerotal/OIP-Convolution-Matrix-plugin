@@ -19,7 +19,7 @@
 
 # Set some compilation options.
 CC=gcc
-CCFLAGS=-Wall -Wpedantic -std=gnu11 -fPIC -shared
+CCFLAGS=-Wall -Wpedantic -Wextra -pedantic-errors -std=gnu11 -fPIC -shared
 LFLAGS=-lm -lfreeimage -loipimgutil -loipbuildinfo
 
 # Enable debugging options.
@@ -54,16 +54,16 @@ include build-config
 # Setup some path variables.
 OIP_PLUGIN_DIR=$(OIPDIR)/plugins
 
-INCLUDES+=-I$(OIPDIR)/src/imgutil
-INCLUDES+=-I$(OIPDIR)/src/buildinfo
-INCLUDES+=-I$(OIPDIR)/src/headers
+INCLUDES+=-I$(OIPDIR)/oipcore/src/oipimgutil
+INCLUDES+=-I$(OIPDIR)/oipcore/src/oipbuildinfo
+INCLUDES+=-I$(OIPDIR)/oipcore/src/oip
 
-LIBS+=-L$(OIPDIR)/src/imgutil/bin/
-LIBS+=-L$(OIPDIR)/src/buildinfo/bin/
+LIBS+=-L$(OIPDIR)/oipcore/src/oipimgutil/bin/
+LIBS+=-L$(OIPDIR)/oipcore/src/oipbuildinfo/bin/
 
 # Check if the OIP directory path is specified and throw an error if not.
 ifndef OIPDIR
-$(error [ERROR]: Open Image Pipeline directory not defined. There's something wrong with the build-config file)
+$(error [ERROR]: OIP directory not defined. There's something wrong with the build-config file)
 endif
 
 # Include the OIP build-config file.
@@ -87,7 +87,7 @@ clean:
 	rm -rf $(BINDIR)
 
 # Delete the compiled .so files and the build-config file.
-clean-hard: clean
+clean-all: clean
 	rm -f build-config
 	
 # Count the lines of code in this project.

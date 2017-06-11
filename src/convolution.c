@@ -27,9 +27,9 @@
 #include <math.h>
 #include <FreeImage.h>
 
-#include "output.h"
-#include "plugin.h"
-#include "buildinfo/build.h"
+#include "oip/abi/output.h"
+#include "oip/abi/plugin.h"
+#include "oipbuildinfo/oipbuildinfo.h"
 
 #define RGBA_CHANNELS 4
 #define KERNEL_W 3
@@ -116,18 +116,18 @@ static RGBQUAD *get_pixel_rel(const IMAGE *img, int32_t x, int32_t y, int32_t r_
 		if (n_y < 0) {
 			// NW corner.
 			return img->img;
-		} else if (n_y >= img->h){
+		} else if ((unsigned int) n_y >= img->h){
 			// SW corner.
 			return img->img + (img->h - 1)*img->w;
 		} else {
 			// Left side.
 			return img->img + n_y*img->w;
 		}
-	} else if (n_x >= img->w) {
+	} else if ((unsigned int) n_x >= img->w) {
 		if (n_y < 0) {
 			// NE corner.
 			return img->img + img->w - 1;
-		} else if (n_y >= img->h) {
+		} else if ((unsigned int) n_y >= img->h) {
 			// SE corner.
 			return img->img + img->h*img->w - 1;
 		} else {
@@ -138,7 +138,7 @@ static RGBQUAD *get_pixel_rel(const IMAGE *img, int32_t x, int32_t y, int32_t r_
 		if (n_y < 0) {
 			// Top.
 			return img->img + n_x;
-		} else if (n_y >= img->h) {
+		} else if ((unsigned int) n_y >= img->h) {
 			// Bottom.
 			return img->img + (img->h - 1)*img->w + n_x;
 		} else {
@@ -161,8 +161,8 @@ static void image_convolve_at(const IMAGE *img, int32_t x, int32_t y, KERNEL *ke
 	}
 	memcpy(p_dest, p, sizeof(RGBQUAD));
 
-	for (int k_y = 0; k_y < kern->h; k_y++) {
-		for (int k_x = 0; k_x < kern->w; k_x++) {
+	for (unsigned int k_y = 0; k_y < kern->h; k_y++) {
+		for (unsigned int k_x = 0; k_x < kern->w; k_x++) {
 			multiplier = kern->kernel[k_y*kern->w + k_x];
 			if (multiplier == 0) {
 				continue;
@@ -209,11 +209,11 @@ static int convolution_parse_args(char **plugin_args, unsigned int plugin_args_c
 	char *tmp_arg = NULL;
 	char *tmp_val = NULL;
 
-	for (unsigned int i = 0; i < plugin_args_count; i++) {
+	for (size_t i = 0; i < plugin_args_count; i++) {
 		tmp_arg = (char*) plugin_args[i*2];
 		tmp_val = (char*) plugin_args[i*2 + 1];
 		if (strcmp(tmp_arg, "kernel") == 0) {
-			for (unsigned int c = 0; c < strlen(tmp_val) && k < 9; c++) {
+			for (size_t c = 0; c < strlen(tmp_val) && k < 9; c++) {
 				if (tmp_val[c] == ',') {
 					// Convert kernel multipliers.
 					plugin_kernel.kernel[k] = strtol(tmp_val + s, NULL, 10);
@@ -237,7 +237,7 @@ static int convolution_parse_args(char **plugin_args, unsigned int plugin_args_c
 		} else if (strcmp(tmp_arg, "channels") == 0) {
 			memset(&enabled_channels, 0, sizeof(struct ENABLED_CHANNELS));
 			printverb("Enabled channels: ");
-			for (int c = 0; c < strlen(tmp_val); c++) {
+			for (size_t c = 0; c < strlen(tmp_val); c++) {
 				switch (tmp_val[c]) {
 					case 'R':
 						enabled_channels.r = 1;
