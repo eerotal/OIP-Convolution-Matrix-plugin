@@ -27,8 +27,8 @@
 #include <math.h>
 #include <FreeImage.h>
 
-#include "oip/abi/output.h"
-#include "oip/abi/plugin.h"
+#include "oipcore/abi/output.h"
+#include "oipcore/abi/plugin.h"
 #include "oipbuildinfo/oipbuildinfo.h"
 
 #define RGBA_CHANNELS 4

@@ -54,12 +54,12 @@ include build-config
 # Setup some path variables.
 OIP_PLUGIN_DIR=$(OIPDIR)/plugins
 
-INCLUDES+=-I$(OIPDIR)/oipcore/src/oipimgutil
-INCLUDES+=-I$(OIPDIR)/oipcore/src/oipbuildinfo
-INCLUDES+=-I$(OIPDIR)/oipcore/src/oip
+INCLUDES+=-I$(OIPDIR)/src/oipcore/oipimgutil
+INCLUDES+=-I$(OIPDIR)/src/oipcore/oipbuildinfo
+INCLUDES+=-I$(OIPDIR)/src/oipcore/oipcore
 
-LIBS+=-L$(OIPDIR)/oipcore/src/oipimgutil/bin/
-LIBS+=-L$(OIPDIR)/oipcore/src/oipbuildinfo/bin/
+LIBS+=-L$(OIPDIR)/src/oipcore/oipimgutil/bin/
+LIBS+=-L$(OIPDIR)/src/oipcore/oipbuildinfo/bin/
 
 # Check if the OIP directory path is specified and throw an error if not.
 ifndef OIPDIR
