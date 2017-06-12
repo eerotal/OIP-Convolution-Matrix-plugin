@@ -69,15 +69,19 @@ endif
 # Include the OIP build-config file.
 include $(OIPDIR)/build-config
 
+.PHONY: compile install clean clean-all LOC
+
 # Compile the plugin.
-compile: $(SRCDIR)/*.c
+compile: $(BINDIR)/lib$(NAME).so
+$(BINDIR)/lib$(NAME).so: $(SRCDIR)/*.c
 	@mkdir -p $(BINDIR)
 	@echo -n "[INFO]: Compiling "$(NAME)"..."
-	@$(CC) $(CCFLAGS) $(SRCDIR)/*.c -o $(BINDIR)/lib$(NAME).so $(INCLUDES) $(LIBS) $(LFLAGS)
+	@$(CC) $(CCFLAGS) $(SRCDIR)/*.c -o $(BINDIR)/lib$(NAME).so	\
+		$(INCLUDES) $(LIBS) $(LFLAGS)
 	@echo " Done."
 
 # Copy the plugin to the OIP plugins directory.
-install:
+install: compile
 	@echo -n "[INFO]: Copying 'lib"$(NAME)".so' to '"$(OIP_PLUGIN_DIR)"'..."
 	@cp $(BINDIR)/lib$(NAME).so $(OIP_PLUGIN_DIR)
 	@echo " Done."
